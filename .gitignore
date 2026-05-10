@@ -1,0 +1,12 @@
+config.json
+.env
+
+logs/*
+!logs/.gitkeep
+
+mini-agent
+*.exe
+
+.vscode/
+.idea/
+.DS_Store
