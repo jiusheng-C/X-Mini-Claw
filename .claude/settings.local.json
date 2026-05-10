@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(gofmt -w \"D:/Code/GO/X-Mini-Claw/C-mini-agent/cmd/mini-agent/main.go\" \"D:/Code/GO/X-Mini-Claw/C-mini-agent/internal/tool/tool.go\" \"D:/Code/GO/X-Mini-Claw/C-mini-agent/internal/tool/registry.go\" \"D:/Code/GO/X-Mini-Claw/C-mini-agent/internal/tool/read_file.go\" \"D:/Code/GO/X-Mini-Claw/C-mini-agent/internal/tool/write_file.go\" \"D:/Code/GO/X-Mini-Claw/C-mini-agent/internal/tool/list_dir.go\" \"D:/Code/GO/X-Mini-Claw/C-mini-agent/internal/tool/exec_command.go\")",
-      "Bash(go build *)"
-    ]
-  }
-}
