@@ -10,3 +10,4 @@ mini-agent
 .vscode/
 .idea/
 .DS_Store
+.claude/
