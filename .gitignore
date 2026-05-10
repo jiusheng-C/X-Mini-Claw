@@ -4,7 +4,7 @@ config.json
 logs/*
 !logs/.gitkeep
 
-mini-agent
+/mini-agent
 *.exe
 
 .vscode/
