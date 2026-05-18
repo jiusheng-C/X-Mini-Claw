@@ -11,4 +11,3 @@ logs/*
 .idea/
 .DS_Store
 .claude/
-config.example.json
