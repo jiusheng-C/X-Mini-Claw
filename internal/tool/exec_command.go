@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -40,7 +41,10 @@ func (t *ExecCommandTool) Run(input string) (string, error) {
 	defer cancel()                                                    // 在函数退出时调用cancel函数，释放资源
 
 	cmd := exec.CommandContext(ctx, "sh", "-c", command) // 将上下文与命令绑定
-	output, err := cmd.CombinedOutput()                  // 执行命令并获取输出
+	if runtime.GOOS == "windows" {
+		cmd = exec.CommandContext(ctx, "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "[Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8; "+command)
+	}
+	output, err := cmd.CombinedOutput() // 执行命令并获取输出
 
 	if ctx.Err() == context.DeadlineExceeded { // 如果命令执行时间超过设定的超时时间
 		return "", fmt.Errorf("命令已超时: %s", timeout)

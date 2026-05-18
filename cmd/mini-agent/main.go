@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -10,29 +9,22 @@ import (
 	"time"
 
 	"github.com/jiusheng-C/X-Mini-Claw/internal/agent"
+	"github.com/jiusheng-C/X-Mini-Claw/internal/config"
 	"github.com/jiusheng-C/X-Mini-Claw/internal/llm"
 	"github.com/jiusheng-C/X-Mini-Claw/internal/tool"
 )
 
-type Config struct {
-	APIKey                string `json:"api_key"`
-	BaseURL               string `json:"base_url"`
-	Model                 string `json:"model"`
-	APIStyle              string `json:"api_style"`
-	Workspace             string `json:"workspace"`
-	CommandTimeoutSeconds int    `json:"command_timeout_seconds"`
-}
-
 func main() {
 	reader := bufio.NewReader(os.Stdin) // 读取数据的缓冲读取器
-	registry := newToolRegistry()       // 创建工具注册表
 
-	cfg, err := loadConfig("config.json")
+	cfg, err := config.Load("config.json")
 	if err != nil {
 		fmt.Println("加载配置失败：", err)
 		return
 	}
 	fmt.Println("配置加载成功，模型：", cfg.Model)
+
+	registry := newToolRegistry(cfg.CommandTimeoutSeconds) // 创建工具注册表
 
 	client := llm.NewOpenAIClient(cfg.APIKey, cfg.BaseURL, cfg.Model, cfg.APIStyle) // 负责和模型通信
 	miniAgent := agent.NewAgent(client, *registry)                                  // 负责"让模型决定用哪个工具，并执行工具循环"
@@ -100,20 +92,6 @@ func main() {
 	}
 }
 
-func loadConfig(path string) (Config, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return Config{}, err
-	}
-
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return Config{}, err
-	}
-
-	return cfg, nil
-}
-
 func printHelp() {
 	fmt.Println("命令:")
 	fmt.Println("  查看当前列表")
@@ -139,13 +117,16 @@ func handleWrite(registry *tool.Registry, input string) {
 	printResult(registry.Execute("write_file", parts[1]+"|"+parts[2]))
 }
 
-func newToolRegistry() *tool.Registry {
+func newToolRegistry(commandTimeoutSeconds int) *tool.Registry {
 	registry := tool.NewRegistry()
 	registry.Register(&tool.ReadFileTool{})
 	registry.Register(&tool.WriteFile{})
 	registry.Register(&tool.ListDirTool{})
 	registry.Register(tool.NewListTools(registry))
-	registry.Register(&tool.ExecCommandTool{Timeout: 10 * time.Second})
+	registry.Register(&tool.ExecCommandTool{
+		Timeout: time.Duration(commandTimeoutSeconds) * time.Second,
+	})
+
 	return registry
 }
 
