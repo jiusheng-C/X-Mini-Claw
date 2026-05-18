@@ -2,17 +2,40 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/jiusheng-C/X-Mini-Claw/internal/agent"
+	"github.com/jiusheng-C/X-Mini-Claw/internal/llm"
 	"github.com/jiusheng-C/X-Mini-Claw/internal/tool"
 )
+
+type Config struct {
+	APIKey                string `json:"api_key"`
+	BaseURL               string `json:"base_url"`
+	Model                 string `json:"model"`
+	APIStyle              string `json:"api_style"`
+	Workspace             string `json:"workspace"`
+	CommandTimeoutSeconds int    `json:"command_timeout_seconds"`
+}
 
 func main() {
 	reader := bufio.NewReader(os.Stdin) // 读取数据的缓冲读取器
 	registry := newToolRegistry()       // 创建工具注册表
+
+	cfg, err := loadConfig("config.json")
+	if err != nil {
+		fmt.Println("加载配置失败：", err)
+		return
+	}
+	fmt.Println("配置加载成功，模型：", cfg.Model)
+
+	client := llm.NewOpenAIClient(cfg.APIKey, cfg.BaseURL, cfg.Model, cfg.APIStyle) // 负责和模型通信
+	miniAgent := agent.NewAgent(client, *registry)                                  // 负责"让模型决定用哪个工具，并执行工具循环"
 
 	fmt.Println("Mini Code Agent 已启动")
 	fmt.Println("输入‘帮助’查看命令")
@@ -22,6 +45,10 @@ func main() {
 
 		input, err := reader.ReadString('\n')
 		if err != nil {
+			if err == io.EOF {
+				fmt.Println("\n再见!")
+				return
+			}
 			fmt.Println("输入错误：", err)
 			continue
 		}
@@ -61,9 +88,30 @@ func main() {
 			printResult(registry.Execute("list_tools", ""))
 
 		default:
-			fmt.Println("未知命令:", input)
+			output, err := miniAgent.Run(input)
+			if err != nil {
+				fmt.Println("错误：", err)
+				continue
+			}
+			fmt.Println(output)
+			// 如果输入是定义的本地命令（帮助/读取/写入/运行...），走原来的分支;
+			// 否则把用户输入交给 miniAgent，让模型决定调用哪个工具，最后输出答案。
 		}
 	}
+}
+
+func loadConfig(path string) (Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Config{}, err
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return Config{}, err
+	}
+
+	return cfg, nil
 }
 
 func printHelp() {
